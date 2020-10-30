@@ -14,7 +14,7 @@
 #define PLUGIN_NAME  "[CS:GO] Welcome System;"
 #define PLUGIN_AUTHOR "HirboSH / KilleR_gamea ($uicidE)"
 #define PLUGIN_DESCRIPTION "[CS:GO] Welcome System, Text + Sound;"
-#define PLUGIN_VERSION "1.00"
+#define PLUGIN_VERSION "1.0.1"
 #define PLUGIN_URL "https://hirbosh.cc/"
 #define DEBUG
 
@@ -24,10 +24,9 @@
 Handle g_hWelcomeSystem[MAXPLAYERS + 1];
 
 ConVar g_cTimeToPost;
+ConVar g_cSoundEnabled;
 ConVar g_cSoundPath;
-ConVar g_cServerIP;
 
-char g_szServerIP[512];
 char g_szPath[PLATFORM_MAX_PATH];
 
 int g_iHostPort;
@@ -42,23 +41,25 @@ public Plugin myinfo = {
 
 public void OnPluginStart(){
     g_cTimeToPost = CreateConVar("sm_welcomesystem_ttp", "5.0", "The Time It Takes Until The Timer Enters The Player's Login Message.");
+    g_cSoundEnabled = CreateConVar("sm_welcomesystem_enable_sound", "1", "Enable Or Disable Welcome Sound", 1, true, 0.0, true, 1.0);
     g_cSoundPath = CreateConVar("sm_welcomesystem_soundpath", "", "The Location Of The Sound.");
-    g_cServerIP = CreateConVar("sm_welcomesystem_serverip", "1.1.1.1", "The IP Address Of The Game Server (IPv4 As Well).");
     
     AutoExecConfig(true, "sm_welcomesystem");
     
     g_iHostPort = FindConVar("hostport").IntValue;
     
     g_cSoundPath.AddChangeHook(OnConVarChanged);
-    g_cServerIP.AddChangeHook(OnConVarChanged);
 }
 
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue){
     g_cSoundPath.GetString(g_szPath, sizeof(g_szPath));
-    g_cServerIP.GetString(g_szServerIP, sizeof(g_szServerIP));
 }
 
 public void OnMapStart(){
+	if (!g_cSoundEnabled.BoolValue){
+		return;
+	}
+	
     char szBuffer[512];
     
     Format(szBuffer, sizeof(szBuffer), "%s", g_szPath);
@@ -81,9 +82,11 @@ public Action Timer_WelcomeSystem(Handle timer, any client){
     PrintToChat(client, " \x05Cheers Loudly! \x07%s\x05 Enters The Server\x01!", client);
     PrintToChat(client, " \x01Be Sure To \x07Observe\x01 The Server Rules.");
     PrintToChat(client, " \x01Please \x07Respect\x01 The Server Ttaff Members!");
-    PrintToChat(client, " \x01Server IP: \x07%s:%d", g_szServerIP, g_iHostPort);
+    PrintToChat(client, " \x01Server IP: \x07%s:%d", GetServerIP(), g_iHostPort);
     PrintToChat(client, " \x07▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\x01");
     
+    if (g_cSoundEnabled.BoolValue){
+   	}
     EmitSoundToClient(client, g_szPath);
     
     g_hWelcomeSystem[client] = null;
@@ -97,4 +100,19 @@ public void OnClientDisconnect(int client){
         KillTimer(g_hWelcomeSystem[client]);
         g_hWelcomeSystem[client] = null;
     }
+}
+
+stock char GetServerIP(){ //https://forums.alliedmods.net/showpost.php?p=1422849&postcount=6?p=1422849&postcount=6
+	char szIP[512];
+	
+	int iPieces[4];
+	int iIP = GetConVarInt(FindConVar("hostip"));
+	
+	iPieces[0] = (iIP >> 24) & 0x000000FF;
+	iPieces[1] = (iIP >> 16) & 0x000000FF;
+	iPieces[2] = (iIP >> 8) & 0x000000FF;
+	iPieces[3] = iIP & 0x000000FF;
+	
+	Format(szIP, sizeof(szIP), "%d.%d.%d.%d", iPieces[0], iPieces[1], iPieces[2], iPieces[3]);
+	return szIP;
 }
